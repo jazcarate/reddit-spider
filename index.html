@@ -19,10 +19,27 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+        }
+
+        #container>iframe {
+            border: 0px none transparent;
+            padding: 0px;
+            width: 100vw;
+            height: 90vh;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Loading...</h1>
+    <div id="container">
+        <h1>Loading...</h1>
+    </div>
+    <p id="attribution"></p>
 </body>
 
 <script>
@@ -46,8 +63,8 @@
                     return response;
                 }).then(resposne => resposne.json())
                 .then(([_, response]) => {
-                    const { body, parent_id } = response.data.children[0].data;
-                    return go(parent_id, [body].concat(acc))
+                    const comment = response.data.children[0].data;
+                    return go(comment.parent_id, [comment].concat(acc))
                 });
         }
 
@@ -64,11 +81,20 @@
             return comments;
         })
         .then(comments => {
-            document.body.innerHTML = "";
-            console.log(comments);
-            comments.map(unescape).forEach(html =>
-                document.body.insertAdjacentHTML("beforeend", html)
-            );
+            const html = comments
+                .map(({ body }) => body)
+                .map(unescape).join("");
+
+            const attribution = comments
+                .map(({ author }) => author)
+                .join(", ")
+
+            document.getElementById("attribution").textContent = `Created with love by: ${attribution}`;
+            var iframe = document.createElement("iframe");
+            iframe.srcdoc = html;
+            const container = document.getElementById("container");
+            container.innerHTML = "";
+            container.appendChild(iframe);
         }).catch(error => document.body.textContent = error);
 </script>
 
