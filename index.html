@@ -1,0 +1,75 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <title>Reddit Spider</title>
+    <meta name="description" content="A website based on a readdit thread">
+    <meta name="author" content="Florius">
+
+    <meta property="og:title" content="Florius">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://reddit-spider.florius.com.ar/">
+    <meta property="og:description" content="A website based on a readdit thread">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+</head>
+
+<body>
+    <h1>Loading...</h1>
+</body>
+
+<script>
+    const thread = "th4kea";
+
+    function unescape(str) {
+        str = str.replace(/&lt;/g, "<");
+        str = str.replace(/&gt;/g, ">");
+        str = str.replace(/&quot;/g, "\"");
+        str = str.replace(/&#39;/g, "\'");
+        str = str.replace(/&amp;/g, "&");
+        return str;
+    }
+
+    function redditCrawl(post) {
+        function go(post, acc) {
+            if (post === `t3_${thread}`) return Promise.resolve(acc);
+            return fetch(`https://www.reddit.com/r/ProgrammerHumor/comments/${thread}/comment/${post.substring("3")}.json`)
+                .then(response => {
+                    if (!response.ok) throw Error(`Couldn't connect to Reddit: ${response.statusText}`);
+                    return response;
+                }).then(resposne => resposne.json())
+                .then(([_, response]) => {
+                    const { body, parent_id } = response.data.children[0].data;
+                    return go(parent_id, [body].concat(acc))
+                });
+        }
+
+        return go(`t1_${post}`, []);
+    }
+
+    Promise.resolve(window.location.hash.substring(1))
+        .then(post => {
+            if (!post) throw Error("You need get a specific reddit thread and put it as an anchor");
+            return post;
+        }).then(post => redditCrawl(post))
+        .then(comments => {
+            if (comments.length == 0) throw Error(`Coudn't find the comment: ${post}`);
+            return comments;
+        })
+        .then(comments => {
+            document.body.innerHTML = "";
+            console.log(comments);
+            comments.map(unescape).forEach(html =>
+                document.body.insertAdjacentHTML("beforeend", html)
+            );
+        }).catch(error => document.body.textContent = error);
+</script>
+
+</html>
